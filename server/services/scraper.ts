@@ -68,7 +68,40 @@ export class ViperGirlsScraper {
 
       console.log(`Page HTML length: ${response.data.length}`);
 
-      // Try multiple selectors that might contain post content
+      // First, decode HTML entities in the entire response
+      const decodedHtml = response.data
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#91;/g, '[')
+        .replace(/&#93;/g, ']');
+      const $decoded = cheerio.load(decodedHtml);
+
+      // Look for image hosting URLs in the decoded HTML content
+      const imageHostUrls = new Set<string>();
+      
+      // Extract all URLs that match image hosting patterns
+      const urlPatterns = [
+        /https?:\/\/(?:www\.)?imgbox\.com\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:i\.)?imgur\.com\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?imagetwist\.com\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?postimg\.cc\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?turboimagehost\.com\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?imagebam\.com\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?imagevenue\.com\/[a-zA-Z0-9]+/g
+      ];
+
+      for (const pattern of urlPatterns) {
+        const matches = decodedHtml.match(pattern);
+        if (matches) {
+          matches.forEach(url => imageHostUrls.add(url));
+        }
+      }
+
+      console.log(`Found ${imageHostUrls.size} image hosting URLs`);
+
+      // Now try to find these URLs in the DOM structure to get preview images
       const postSelectors = [
         '.message-body',
         '.bbWrapper', 
@@ -77,49 +110,76 @@ export class ViperGirlsScraper {
         '.message-content',
         'article .message',
         '[data-lb-sidebar-href]',
-        '.js-post'
+        '.js-post',
+        '.message',
+        '.post'
       ];
 
       let foundPosts = false;
       for (const selector of postSelectors) {
-        const posts = $(selector);
+        const posts = $decoded(selector);
         if (posts.length > 0) {
           console.log(`Found ${posts.length} posts using selector: ${selector}`);
           foundPosts = true;
           
           posts.each((_, element) => {
-            $(element).find('a').each((_, linkElement) => {
-              const href = $(linkElement).attr('href');
+            // Look for all links in this post
+            $decoded(element).find('a').each((_, linkElement) => {
+              const href = $decoded(linkElement).attr('href');
               if (href && this.isImageHostingUrl(href)) {
-                // Check if link contains an image preview
-                const img = $(linkElement).find('img');
+                // Try to find a preview image
+                const img = $decoded(linkElement).find('img');
+                let previewUrl = '';
+                
                 if (img.length > 0) {
-                  const previewUrl = img.attr('src') || '';
-                  console.log(`Found image: ${href} -> ${previewUrl}`);
-                  images.push({
-                    previewUrl,
-                    hostingPage: href,
-                    hostingSite: this.extractHostingSite(href),
-                    pageNumber: page,
-                  });
+                  previewUrl = img.attr('src') || '';
+                } else {
+                  // If no preview image, try to construct one from the URL
+                  previewUrl = this.constructPreviewUrl(href);
                 }
+
+                console.log(`Found image: ${href} -> ${previewUrl}`);
+                images.push({
+                  previewUrl,
+                  hostingPage: href,
+                  hostingSite: this.extractHostingSite(href),
+                  pageNumber: page,
+                });
               }
             });
+            
+            // Also check for URLs in text content that might not be properly linked
+            const textContent = $decoded(element).text();
+            for (const url of imageHostUrls) {
+              if (textContent.includes(url) && !images.some(img => img.hostingPage === url)) {
+                const previewUrl = this.constructPreviewUrl(url);
+                console.log(`Found text URL: ${url} -> ${previewUrl}`);
+                images.push({
+                  previewUrl,
+                  hostingPage: url,
+                  hostingSite: this.extractHostingSite(url),
+                  pageNumber: page,
+                });
+              }
+            }
           });
           break; // Use the first working selector
         }
       }
 
-      if (!foundPosts) {
-        console.log('No posts found with any selector. Available elements:');
-        $('*').each((_, element) => {
-          const tagName = $(element).prop('tagName');
-          const className = $(element).attr('class') || '';
-          const id = $(element).attr('id') || '';
-          if (className.includes('message') || className.includes('post') || id.includes('message') || id.includes('post')) {
-            console.log(`  ${tagName}.${className}#${id}`);
-          }
-        });
+      // If no posts found with selectors, scan for URLs in the entire page
+      if (!foundPosts && imageHostUrls.size > 0) {
+        console.log('No posts found with selectors, using direct URL extraction');
+        for (const url of imageHostUrls) {
+          const previewUrl = this.constructPreviewUrl(url);
+          console.log(`Direct URL: ${url} -> ${previewUrl}`);
+          images.push({
+            previewUrl,
+            hostingPage: url,
+            hostingSite: this.extractHostingSite(url),
+            pageNumber: page,
+          });
+        }
       }
 
       console.log(`Found ${images.length} images on page ${page}`);
@@ -239,5 +299,44 @@ export class ViperGirlsScraper {
     }
 
     throw new Error('Could not find image URL on page');
+  }
+
+  private constructPreviewUrl(hostingPageUrl: string): string {
+    try {
+      const hostingSite = this.extractHostingSite(hostingPageUrl);
+      
+      switch (hostingSite) {
+        case 'imgbox.com':
+          // Extract ID from imgbox URL and construct thumbnail
+          const imgboxMatch = hostingPageUrl.match(/imgbox\.com\/([a-zA-Z0-9]+)/);
+          if (imgboxMatch) {
+            return `https://thumbs2.imgbox.com/t_${imgboxMatch[1]}.jpg`;
+          }
+          break;
+        
+        case 'imgur.com':
+          // Extract ID from imgur URL
+          const imgurMatch = hostingPageUrl.match(/imgur\.com\/([a-zA-Z0-9]+)/);
+          if (imgurMatch) {
+            return `https://i.imgur.com/${imgurMatch[1]}t.jpg`;
+          }
+          break;
+        
+        case 'imagetwist.com':
+          // ImageTwist doesn't have a standard thumbnail format, use placeholder
+          return '/api/placeholder/150/150';
+        
+        case 'postimg.cc':
+          // PostImg doesn't have a standard thumbnail format, use placeholder
+          return '/api/placeholder/150/150';
+        
+        default:
+          return '/api/placeholder/150/150';
+      }
+      
+      return '/api/placeholder/150/150';
+    } catch {
+      return '/api/placeholder/150/150';
+    }
   }
 }
