@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Settings, HelpCircle } from "lucide-react";
 import UrlInput from "@/components/url-input";
 import PageRangeSelector from "@/components/page-range-selector";
 import DownloadOptions from "@/components/download-options";
-import DownloadLocationSelector from "@/components/download-location-selector";
+import MobileDirectoryPicker from "@/components/mobile-directory-picker";
+import { MobileAuthHandler, MobileDirectoryManager } from "@/components/mobile-auth-handler";
 import ProgressPanel from "@/components/progress-panel";
 import DownloadHistory from "@/components/download-history";
 import { Button } from "@/components/ui/button";
@@ -22,21 +23,35 @@ export default function DownloaderPage() {
     skipExisting: false,
   });
 
-  const [downloadLocation, setDownloadLocation] = useState({
+  const [mobileLocation, setMobileLocation] = useState({
     downloadLocation: "local" as "local" | "google-drive",
-    customDirectory: undefined as string | undefined,
-    googleDriveFolder: undefined as string | undefined,
-    googleDriveFolderName: undefined as string | undefined,
+    selectedDirectory: undefined as FileSystemDirectoryHandle | undefined,
+    directoryName: undefined as string | undefined,
+    googleDriveConnected: false,
+    googleDriveAccessToken: undefined as string | undefined,
   });
 
-  const handleDownloadLocationChange = (newLocation: any) => {
-    setDownloadLocation({
-      downloadLocation: newLocation.downloadLocation,
-      customDirectory: newLocation.customDirectory,
-      googleDriveFolder: newLocation.googleDriveFolder,
-      googleDriveFolderName: newLocation.googleDriveFolderName,
-    });
-  };
+  useEffect(() => {
+    // Check if Google Drive is already connected
+    const isConnected = MobileDirectoryManager.isGoogleDriveConnected();
+    if (isConnected) {
+      setMobileLocation(prev => ({ ...prev, googleDriveConnected: true }));
+    }
+
+    // Listen for Google Drive connection events
+    const handleGoogleDriveConnected = (event: any) => {
+      setMobileLocation(prev => ({ 
+        ...prev, 
+        googleDriveConnected: true,
+        googleDriveAccessToken: event.detail.tokens.access_token
+      }));
+    };
+
+    window.addEventListener('google-drive-connected', handleGoogleDriveConnected);
+    return () => {
+      window.removeEventListener('google-drive-connected', handleGoogleDriveConnected);
+    };
+  }, []);
 
   const { startDownload, isStarting } = useDownload();
 
@@ -48,7 +63,9 @@ export default function DownloaderPage() {
       fromPage: pageRange.from,
       toPage: pageRange.to,
       ...downloadOptions,
-      ...downloadLocation,
+      downloadLocation: mobileLocation.downloadLocation,
+      customDirectory: mobileLocation.directoryName,
+      googleDriveFolder: mobileLocation.googleDriveConnected ? "root" : undefined,
     };
 
     await startDownload(request);
@@ -58,6 +75,7 @@ export default function DownloaderPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <MobileAuthHandler />
       {/* Header */}
       <header className="bg-surface shadow-sm border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,9 +117,9 @@ export default function DownloaderPage() {
               onOptionsChange={setDownloadOptions}
             />
 
-            <DownloadLocationSelector
-              location={downloadLocation}
-              onLocationChange={handleDownloadLocationChange}
+            <MobileDirectoryPicker
+              location={mobileLocation}
+              onLocationChange={setMobileLocation}
             />
 
             <Button

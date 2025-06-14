@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { downloadManager } from "./services/downloader";
+import { mobileDownloadManager } from "./services/mobile-download-manager";
 import { ViperGirlsScraper } from "./services/scraper";
 import { googleDriveService } from "./services/google-drive";
 import { insertDownloadSessionSchema, type DownloadRequest } from "@shared/schema";
