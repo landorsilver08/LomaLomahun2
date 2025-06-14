@@ -1,11 +1,8 @@
-import { 
-  downloadSessions, 
-  downloadedImages,
-  type DownloadSession, 
-  type DownloadedImage,
-  type InsertDownloadSession,
-  type InsertDownloadedImage 
-} from "@shared/schema";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { downloadSessions, downloadedImages } from '@shared/schema';
+import { eq, desc } from 'drizzle-orm';
+import type { DownloadSession, DownloadedImage, InsertDownloadSession, InsertDownloadedImage } from "@shared/schema";
 
 export interface IStorage {
   // Download Sessions
@@ -22,104 +19,63 @@ export interface IStorage {
   getActiveDownloadsForSession(sessionId: number): Promise<DownloadedImage[]>;
 }
 
-export class MemStorage implements IStorage {
-  private downloadSessions: Map<number, DownloadSession>;
-  private downloadedImages: Map<number, DownloadedImage>;
-  private currentSessionId: number;
-  private currentImageId: number;
+class PostgresStorage implements IStorage {
+  private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    this.downloadSessions = new Map();
-    this.downloadedImages = new Map();
-    this.currentSessionId = 1;
-    this.currentImageId = 1;
+    const client = postgres(process.env.DATABASE_URL!);
+    this.db = drizzle(client);
   }
 
-  async createDownloadSession(insertSession: InsertDownloadSession): Promise<DownloadSession> {
-    const id = this.currentSessionId++;
-    const session: DownloadSession = {
-      ...insertSession,
-      id,
-      threadTitle: insertSession.threadTitle || null,
-      totalImages: insertSession.totalImages || null,
-      completedImages: insertSession.completedImages || null,
-      failedImages: insertSession.failedImages || null,
-      status: insertSession.status || 'pending',
-      outputFormat: insertSession.outputFormat || 'individual',
-      concurrentLimit: insertSession.concurrentLimit || null,
-      retryEnabled: insertSession.retryEnabled || null,
-      preserveFilenames: insertSession.preserveFilenames || null,
-      skipExisting: insertSession.skipExisting || null,
-      errorMessage: insertSession.errorMessage || null,
-      startedAt: new Date(),
-      completedAt: null,
-    };
-    this.downloadSessions.set(id, session);
-    return session;
+  async createDownloadSession(session: InsertDownloadSession): Promise<DownloadSession> {
+    const [result] = await this.db.insert(downloadSessions).values(session).returning();
+    return result;
   }
 
   async getDownloadSession(id: number): Promise<DownloadSession | undefined> {
-    return this.downloadSessions.get(id);
+    const [result] = await this.db.select().from(downloadSessions).where(eq(downloadSessions.id, id));
+    return result;
   }
 
   async updateDownloadSession(id: number, updates: Partial<DownloadSession>): Promise<DownloadSession | undefined> {
-    const session = this.downloadSessions.get(id);
-    if (session) {
-      const updatedSession = { ...session, ...updates };
-      this.downloadSessions.set(id, updatedSession);
-      return updatedSession;
-    }
-    return undefined;
+    const [result] = await this.db.update(downloadSessions).set(updates).where(eq(downloadSessions.id, id)).returning();
+    return result;
   }
 
   async getAllDownloadSessions(): Promise<DownloadSession[]> {
-    return Array.from(this.downloadSessions.values()).sort((a, b) => 
-      (b.startedAt?.getTime() || 0) - (a.startedAt?.getTime() || 0)
-    );
+    return await this.db.select().from(downloadSessions).orderBy(desc(downloadSessions.id));
   }
 
   async deleteDownloadSession(id: number): Promise<boolean> {
-    // Also delete related images
-    const images = Array.from(this.downloadedImages.values()).filter(img => img.sessionId === id);
-    images.forEach(img => this.downloadedImages.delete(img.id));
-    
-    return this.downloadSessions.delete(id);
+    try {
+      // Delete associated images first
+      await this.db.delete(downloadedImages).where(eq(downloadedImages.sessionId, id));
+      // Delete the session
+      const result = await this.db.delete(downloadSessions).where(eq(downloadSessions.id, id));
+      return Array.isArray(result) ? result.length > 0 : true;
+    } catch (error) {
+      console.error('Delete session error:', error);
+      return false;
+    }
   }
 
-  async createDownloadedImage(insertImage: InsertDownloadedImage): Promise<DownloadedImage> {
-    const id = this.currentImageId++;
-    const image: DownloadedImage = {
-      ...insertImage,
-      id,
-      progress: insertImage.progress || null,
-      status: insertImage.status || 'pending',
-      errorMessage: insertImage.errorMessage || null,
-      hostingSite: insertImage.hostingSite || null,
-      fileSize: insertImage.fileSize || null,
-    };
-    this.downloadedImages.set(id, image);
-    return image;
+  async createDownloadedImage(image: InsertDownloadedImage): Promise<DownloadedImage> {
+    const [result] = await this.db.insert(downloadedImages).values(image).returning();
+    return result;
   }
 
   async getDownloadedImagesForSession(sessionId: number): Promise<DownloadedImage[]> {
-    return Array.from(this.downloadedImages.values()).filter(img => img.sessionId === sessionId);
+    return await this.db.select().from(downloadedImages).where(eq(downloadedImages.sessionId, sessionId));
   }
 
   async updateDownloadedImage(id: number, updates: Partial<DownloadedImage>): Promise<DownloadedImage | undefined> {
-    const image = this.downloadedImages.get(id);
-    if (image) {
-      const updatedImage = { ...image, ...updates };
-      this.downloadedImages.set(id, updatedImage);
-      return updatedImage;
-    }
-    return undefined;
+    const [result] = await this.db.update(downloadedImages).set(updates).where(eq(downloadedImages.id, id)).returning();
+    return result;
   }
 
   async getActiveDownloadsForSession(sessionId: number): Promise<DownloadedImage[]> {
-    return Array.from(this.downloadedImages.values()).filter(
-      img => img.sessionId === sessionId && img.status === "downloading"
-    );
+    return await this.db.select().from(downloadedImages).where(eq(downloadedImages.sessionId, sessionId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PostgresStorage();
