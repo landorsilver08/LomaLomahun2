@@ -273,19 +273,7 @@ export class MobileDownloadManager {
     const zipPath = path.join(sessionDir, `vripper_session_${session.id}.zip`);
     fs.writeFileSync(zipPath, zipData);
 
-    // For mobile, we could also upload the ZIP to Google Drive
-    if (session.downloadLocation === 'google-drive' && session.googleDriveFolder) {
-      try {
-        await googleDriveService.uploadBuffer(
-          zipData, 
-          `vripper_session_${session.id}.zip`, 
-          'application/zip',
-          session.googleDriveFolder
-        );
-      } catch (error) {
-        console.error('Failed to upload ZIP to Google Drive:', error);
-      }
-    }
+    // ZIP file created locally
   }
 
   private getSessionDownloadDir(session: DownloadSession): string {
@@ -329,17 +317,18 @@ export class MobileDownloadManager {
     const failedImages = images.filter(img => img.status === 'failed').length;
     const activeDownloads = images.filter(img => img.status === 'downloading');
 
-    const overallProgress = session.totalImages > 0 
-      ? Math.round((completedImages / session.totalImages) * 100) 
+    const totalImages = session.totalImages || 0;
+    const overallProgress = totalImages > 0 
+      ? Math.round((completedImages / totalImages) * 100) 
       : 0;
 
     return {
       sessionId,
       stage: session.status === 'completed' ? 'completed' : 'downloading',
       overallProgress,
-      currentStage: `${completedImages}/${session.totalImages} images completed`,
+      currentStage: `${completedImages}/${totalImages} images completed`,
       completedImages,
-      totalImages: session.totalImages,
+      totalImages,
       failedImages,
       activeDownloads: activeDownloads.map(img => ({
         filename: img.filename,

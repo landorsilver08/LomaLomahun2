@@ -60,9 +60,8 @@ export type DownloadRequest = {
   fromPage: number;
   toPage: number;
   outputFormat: "individual" | "zip";
-  downloadLocation: "local" | "google-drive";
+  downloadLocation: "local";
   customDirectory?: string;
-  googleDriveFolder?: string;
   concurrentLimit: number;
   retryEnabled: boolean;
   preserveFilenames: boolean;
