@@ -14,13 +14,29 @@ export class ViperGirlsScraper {
   async parseThreadUrl(url: string): Promise<{ threadId: string; currentPage?: number }> {
     const urlObj = new URL(url);
     
-    // Extract thread ID from URL path
-    const pathMatch = urlObj.pathname.match(/\/threads\/.*?\.(\d+)/);
+    // Handle different ViperGirls URL formats
+    // Format 1: /threads/thread-name.threadId/
+    // Format 2: /threads/threadId-thread-name/
+    // Format 3: /threads/threadId-thread-name/?page=X
+    
+    let threadId: string;
+    let pathMatch = urlObj.pathname.match(/\/threads\/.*?\.(\d+)/);
+    
     if (!pathMatch) {
-      throw new Error('Invalid ViperGirls thread URL');
+      // Try alternative format: /threads/threadId-something/
+      pathMatch = urlObj.pathname.match(/\/threads\/(\d+)-/);
     }
     
-    const threadId = pathMatch[1];
+    if (!pathMatch) {
+      // Try another format: just extract any number from the path
+      pathMatch = urlObj.pathname.match(/\/threads\/[^\/]*?(\d{6,})/);
+    }
+    
+    if (!pathMatch) {
+      throw new Error('Invalid ViperGirls thread URL - could not extract thread ID');
+    }
+    
+    threadId = pathMatch[1];
     
     // Extract current page from URL parameters
     const pageParam = urlObj.searchParams.get('page');

@@ -38,7 +38,8 @@ export default function DownloadHistory() {
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      const completedSessions = sessions?.filter((s: DownloadSession) => s.status === "completed") || [];
+      const allSessions = (sessions as DownloadSession[]) || [];
+      const completedSessions = allSessions.filter((s: DownloadSession) => s.status === "completed");
       await Promise.all(
         completedSessions.map((session: DownloadSession) =>
           apiRequest("DELETE", `/api/downloads/${session.id}`)
@@ -168,18 +169,21 @@ function HistoryItem({ session, onDelete, onDownloadZip, isDeleting, isDownloadi
     }
   };
 
-  const formatDuration = (start: Date | null, end: Date | null) => {
+  const formatDuration = (start: Date | string | null, end: Date | string | null) => {
     if (!start || !end) return "Unknown";
-    const duration = Math.round((end.getTime() - start.getTime()) / 1000);
+    const startDate = typeof start === 'string' ? new Date(start) : start;
+    const endDate = typeof end === 'string' ? new Date(end) : end;
+    const duration = Math.round((endDate.getTime() - startDate.getTime()) / 1000);
     const minutes = Math.floor(duration / 60);
     const seconds = duration % 60;
     return `${minutes}m ${seconds}s`;
   };
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date: Date | string | null) => {
     if (!date) return "Unknown";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const diffHours = Math.round((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffHours = Math.round((now.getTime() - dateObj.getTime()) / (1000 * 60 * 60));
     
     if (diffHours < 1) return "Just now";
     if (diffHours < 24) return `${diffHours} hours ago`;

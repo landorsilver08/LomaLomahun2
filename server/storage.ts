@@ -40,6 +40,17 @@ export class MemStorage implements IStorage {
     const session: DownloadSession = {
       ...insertSession,
       id,
+      threadTitle: insertSession.threadTitle || null,
+      totalImages: insertSession.totalImages || null,
+      completedImages: insertSession.completedImages || null,
+      failedImages: insertSession.failedImages || null,
+      status: insertSession.status || 'pending',
+      outputFormat: insertSession.outputFormat || 'individual',
+      concurrentLimit: insertSession.concurrentLimit || null,
+      retryEnabled: insertSession.retryEnabled || null,
+      preserveFilenames: insertSession.preserveFilenames || null,
+      skipExisting: insertSession.skipExisting || null,
+      errorMessage: insertSession.errorMessage || null,
       startedAt: new Date(),
       completedAt: null,
     };
@@ -80,6 +91,11 @@ export class MemStorage implements IStorage {
     const image: DownloadedImage = {
       ...insertImage,
       id,
+      progress: insertImage.progress || null,
+      status: insertImage.status || 'pending',
+      errorMessage: insertImage.errorMessage || null,
+      hostingSite: insertImage.hostingSite || null,
+      fileSize: insertImage.fileSize || null,
     };
     this.downloadedImages.set(id, image);
     return image;
