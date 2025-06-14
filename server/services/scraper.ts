@@ -90,7 +90,7 @@ export class ViperGirlsScraper {
       for (const pattern of urlPatterns) {
         const matches = decodedHtml.match(pattern);
         if (matches) {
-          matches.forEach(url => imageHostUrls.add(url));
+          matches.forEach((url: string) => imageHostUrls.add(url));
         }
       }
 
@@ -145,7 +145,7 @@ export class ViperGirlsScraper {
             
             // Also check for URLs in text content that might not be properly linked
             const textContent = $decoded(element).text();
-            for (const url of imageHostUrls) {
+            Array.from(imageHostUrls).forEach(url => {
               if (textContent.includes(url) && !images.some(img => img.hostingPage === url)) {
                 const previewUrl = this.constructPreviewUrl(url);
                 console.log(`Found text URL: ${url} -> ${previewUrl}`);
@@ -156,7 +156,7 @@ export class ViperGirlsScraper {
                   pageNumber: page,
                 });
               }
-            }
+            });
           });
           break; // Use the first working selector
         }
@@ -165,7 +165,7 @@ export class ViperGirlsScraper {
       // If no posts found with selectors, scan for URLs in the entire page
       if (!foundPosts && imageHostUrls.size > 0) {
         console.log('No posts found with selectors, using direct URL extraction');
-        for (const url of imageHostUrls) {
+        Array.from(imageHostUrls).forEach(url => {
           const previewUrl = this.constructPreviewUrl(url);
           console.log(`Direct URL: ${url} -> ${previewUrl}`);
           images.push({
@@ -174,7 +174,7 @@ export class ViperGirlsScraper {
             hostingSite: this.extractHostingSite(url),
             pageNumber: page,
           });
-        }
+        });
       }
 
       console.log(`Found ${images.length} images on page ${page}`);

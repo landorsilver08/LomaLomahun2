@@ -60,7 +60,7 @@ export default function ImageDownloaderPage() {
 
   const downloadImageMutation = useMutation({
     mutationFn: async (imageData: ImageData) => {
-      const response = await apiRequest('/api/download-image', {
+      const response = await fetch('/api/download-image', {
         method: 'POST',
         body: JSON.stringify({ 
           url: imageData.url,
@@ -69,6 +69,7 @@ export default function ImageDownloaderPage() {
         }),
         headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) throw new Error('Failed to download image');
       return response.blob();
     },
     onSuccess: (blob, imageData) => {
@@ -109,22 +110,23 @@ export default function ImageDownloaderPage() {
     }
   });
 
-  const parseUrls = (input: string): string[] => {
-    const urlRegex = /https?:\/\/(www\.)?(imagebam\.com\/image\/[a-zA-Z0-9]+|imgbox\.com\/[a-zA-Z0-9]+)/g;
-    return input.match(urlRegex) || [];
+  const parseViperGirlsUrl = (input: string): string | null => {
+    const urlRegex = /https?:\/\/(?:www\.)?vipergirls\.to\/threads\/[^\s]+/;
+    const match = input.match(urlRegex);
+    return match ? match[0] : null;
   };
 
   const handleExtractImages = () => {
-    const urls = parseUrls(inputUrl);
-    if (urls.length === 0) {
+    const threadUrl = parseViperGirlsUrl(inputUrl);
+    if (!threadUrl) {
       toast({
-        title: "No valid URLs found",
-        description: "Please enter ImageBam or Imgbox URLs",
+        title: "Invalid URL",
+        description: "Please enter a valid ViperGirls thread URL",
         variant: "destructive"
       });
       return;
     }
-    extractImagesMutation.mutate(urls);
+    extractImagesMutation.mutate(threadUrl);
   };
 
   const handleDownloadImage = (image: ImageData) => {
@@ -203,17 +205,17 @@ export default function ImageDownloaderPage() {
               <textarea
                 value={inputUrl}
                 onChange={(e) => setInputUrl(e.target.value)}
-                placeholder="Paste ImageBam or Imgbox URLs here (one per line or separated by spaces)..."
-                className="w-full min-h-[120px] p-4 rounded-xl bg-input border border-border resize-none text-sm font-mono"
+                placeholder="Paste ViperGirls thread URL here (e.g., https://vipergirls.to/threads/thread-name.123456/)..."
+                className="w-full min-h-[120px] p-4 rounded-xl bg-input border border-border resize-none text-sm"
               />
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="flex items-center space-x-1">
                   <div className="w-2 h-2 rounded-full bg-primary"></div>
-                  <span>ImageBam: imagebam.com/image/...</span>
+                  <span>Will extract ImageBam images</span>
                 </span>
                 <span className="flex items-center space-x-1">
                   <div className="w-2 h-2 rounded-full bg-info"></div>
-                  <span>Imgbox: imgbox.com/...</span>
+                  <span>Will extract Imgbox images</span>
                 </span>
               </div>
             </div>
@@ -232,7 +234,7 @@ export default function ImageDownloaderPage() {
               ) : (
                 <>
                   <Eye className="mr-2 h-5 w-5" />
-                  Extract Images ({parseUrls(inputUrl).length} URLs found)
+                  Extract Images from Thread
                 </>
               )}
             </Button>
