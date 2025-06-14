@@ -22,6 +22,13 @@ export default function DownloaderPage() {
     skipExisting: false,
   });
 
+  const [downloadLocation, setDownloadLocation] = useState({
+    downloadLocation: "local" as "local" | "google-drive",
+    customDirectory: undefined as string | undefined,
+    googleDriveFolder: undefined as string | undefined,
+    googleDriveFolderName: undefined as string | undefined,
+  });
+
   const { startDownload, isStarting } = useDownload();
 
   const handleStartDownload = async () => {
@@ -32,6 +39,7 @@ export default function DownloaderPage() {
       fromPage: pageRange.from,
       toPage: pageRange.to,
       ...downloadOptions,
+      ...downloadLocation,
     };
 
     await startDownload(request);
@@ -80,6 +88,11 @@ export default function DownloaderPage() {
             <DownloadOptions
               options={downloadOptions}
               onOptionsChange={setDownloadOptions}
+            />
+
+            <DownloadLocationSelector
+              location={downloadLocation}
+              onLocationChange={setDownloadLocation}
             />
 
             <Button

@@ -59,7 +59,8 @@ export default function DownloadLocationSelector({
   // Exchange auth code for tokens
   const exchangeTokensMutation = useMutation({
     mutationFn: async (code: string) => {
-      return await apiRequest('/api/google-drive/auth', 'POST', { code });
+      const response = await apiRequest('POST', '/api/google-drive/auth', { code });
+      return await response.json() as GoogleDriveTokens;
     },
     onSuccess: (tokens: GoogleDriveTokens) => {
       setGoogleTokens(tokens);
@@ -81,10 +82,11 @@ export default function DownloadLocationSelector({
   const listFoldersMutation = useMutation({
     mutationFn: async () => {
       if (!googleTokens) throw new Error("Not authenticated");
-      return await apiRequest('/api/google-drive/folders', 'POST', {
+      const response = await apiRequest('POST', '/api/google-drive/folders', {
         accessToken: googleTokens.access_token,
         refreshToken: googleTokens.refresh_token
       });
+      return await response.json() as GoogleDriveFolder[];
     },
     onSuccess: (folders: GoogleDriveFolder[]) => {
       // Update query cache
@@ -96,11 +98,12 @@ export default function DownloadLocationSelector({
   const createFolderMutation = useMutation({
     mutationFn: async (folderName: string) => {
       if (!googleTokens) throw new Error("Not authenticated");
-      return await apiRequest('/api/google-drive/create-folder', 'POST', {
+      const response = await apiRequest('POST', '/api/google-drive/create-folder', {
         name: folderName,
         accessToken: googleTokens.access_token,
         refreshToken: googleTokens.refresh_token
       });
+      return await response.json();
     },
     onSuccess: () => {
       setNewFolderName("");
@@ -136,8 +139,9 @@ export default function DownloadLocationSelector({
 
   const openGoogleDriveAuth = async () => {
     try {
-      const response = await apiRequest('/api/google-drive/auth-url');
-      window.open(response.authUrl, '_blank');
+      const response = await apiRequest('GET', '/api/google-drive/auth-url');
+      const data = await response.json();
+      window.open(data.authUrl, '_blank');
     } catch (error) {
       toast({
         title: "Error",
@@ -266,12 +270,12 @@ export default function DownloadLocationSelector({
                           </Button>
                         </div>
 
-                        {folders && (
+                        {listFoldersMutation.data && Array.isArray(listFoldersMutation.data) && (
                           <div className="space-y-2">
                             <Label>Select Folder</Label>
                             <Select 
                               onValueChange={(value) => {
-                                const folder = folders.find((f: GoogleDriveFolder) => f.id === value);
+                                const folder = (listFoldersMutation.data as GoogleDriveFolder[])?.find((f: GoogleDriveFolder) => f.id === value);
                                 if (folder) {
                                   handleGoogleDriveFolderSelect(folder.id, folder.name);
                                 }
@@ -281,7 +285,7 @@ export default function DownloadLocationSelector({
                                 <SelectValue placeholder="Choose a folder" />
                               </SelectTrigger>
                               <SelectContent>
-                                {folders.map((folder: GoogleDriveFolder) => (
+                                {(listFoldersMutation.data as GoogleDriveFolder[])?.map((folder: GoogleDriveFolder) => (
                                   <SelectItem key={folder.id} value={folder.id}>
                                     {folder.name}
                                   </SelectItem>
