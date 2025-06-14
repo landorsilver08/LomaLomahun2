@@ -51,10 +51,12 @@ export default function ImageDownloaderPage() {
     },
     onSuccess: (data) => {
       setImages(data.images || []);
+      setPageTexts(data.pageTexts || []);
+      setScannedPages(data.scannedPages || 0);
       if (data.images?.length > 0) {
         toast({
           title: "Images extracted",
-          description: `Found ${data.images.length} downloadable images`,
+          description: `Found ${data.images.length} images across ${data.scannedPages} pages`,
         });
       }
     },
@@ -250,6 +252,34 @@ export default function ImageDownloaderPage() {
           </CardContent>
         </Card>
 
+        {/* Page Summary Section */}
+        {pageTexts.length > 0 && (
+          <Card className="glass border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center space-x-2">
+                <ExternalLink className="h-5 w-5 text-info" />
+                <span>Thread Summary ({scannedPages} pages scanned)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {pageTexts.map((pageText, index) => (
+                  <div key={index} className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        Page {pageText.page}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {pageText.summary}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Results Section */}
         {images.length > 0 && (
           <Card className="glass border-border/50">
@@ -342,12 +372,19 @@ export default function ImageDownloaderPage() {
                         <CardContent className="p-3">
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Badge 
-                                variant={image.hostingSite === 'imagebam.com' ? 'default' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {image.hostingSite}
-                              </Badge>
+                              <div className="flex items-center space-x-1">
+                                <Badge 
+                                  variant={image.hostingSite === 'imagebam.com' ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {image.hostingSite}
+                                </Badge>
+                                {image.pageNumber && (
+                                  <Badge variant="outline" className="text-xs">
+                                    P{image.pageNumber}
+                                  </Badge>
+                                )}
+                              </div>
                               {image.isValid && (
                                 <Button
                                   onClick={() => handleDownloadImage(image)}
