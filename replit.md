@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack web application called "VRipper" - a specialized image downloader for ViperGirls forum threads. The application allows users to input ViperGirls thread URLs, specify page ranges, configure download options, and track download progress in real-time.
+VRipper is a Progressive Web App (PWA) for downloading images from ViperGirls forum threads. The application allows users to input ViperGirls thread URLs, specify page ranges, configure download options, and track download progress in real-time. As a PWA, it can be installed on mobile devices and works offline with cached resources.
 
 ## System Architecture
 
@@ -94,10 +94,17 @@ The application follows a monorepo structure with clear separation between clien
 - **DATABASE_URL**: PostgreSQL connection string (auto-provisioned in Replit)
 - **File Storage**: Local filesystem for downloaded images
 
-## Changelog
+## Recent Changes
 
-Changelog:
-- June 14, 2025. Initial setup
+- June 14, 2025: Converted to Progressive Web App (PWA)
+  - Added service worker for offline functionality
+  - Created PWA manifest with app icons
+  - Added install button component
+  - Removed Google Drive integration to eliminate API dependencies
+  - Simplified download location to local-only storage
+  - Updated app branding to "VRipper"
+
+- June 14, 2025: Initial setup
 
 ## User Preferences
 

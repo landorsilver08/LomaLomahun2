@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import PWAInstallButton from "@/components/pwa-install-button";
 
 interface ImageData {
   url: string;
@@ -193,11 +194,14 @@ export default function ImageDownloaderPage() {
               <div className="p-2 rounded-xl gradient-bg">
                 <Image className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold gradient-text">ImageBam & Imgbox Downloader</h1>
+              <h1 className="text-2xl font-bold gradient-text">VRipper</h1>
             </div>
-            <Badge variant="secondary" className="px-3 py-1">
-              Mobile Ready
-            </Badge>
+            <div className="flex items-center gap-2">
+              <PWAInstallButton />
+              <Badge variant="secondary" className="px-3 py-1">
+                PWA Ready
+              </Badge>
+            </div>
           </div>
         </div>
       </header>
