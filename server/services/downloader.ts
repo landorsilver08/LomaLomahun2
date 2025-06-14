@@ -5,7 +5,7 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import JSZip from 'jszip';
 import { ViperGirlsScraper, type ScrapedImage } from './scraper';
-import { googleDriveService } from './google-drive';
+// Google Drive service removed
 import { storage } from '../storage';
 import type { DownloadSession, DownloadedImage, DownloadProgress } from '@shared/schema';
 

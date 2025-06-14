@@ -203,17 +203,7 @@ export class MobileDownloadManager {
       const writeStream = fs.createWriteStream(filePath);
       await pipelineAsync(response.data, writeStream);
 
-      // Handle Google Drive upload for mobile
-      if (session.downloadLocation === 'google-drive') {
-        try {
-          // For mobile, we'll return the file data so the frontend can handle it
-          // via the File System Access API or Google Drive API
-          await this.uploadToGoogleDriveMobile(filePath, image.filename, session);
-        } catch (error) {
-          console.error('Failed to upload to Google Drive:', error);
-          // Continue with local storage if Google Drive fails
-        }
-      }
+      // Files are now saved locally only
 
       await storage.updateDownloadedImage(image.id, {
         status: 'completed',
