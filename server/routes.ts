@@ -18,9 +18,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "URL is required" });
       }
 
+      console.log('Parsing URL:', url);
       const parsed = await scraper.parseThreadUrl(url);
+      console.log('Parsed result:', parsed);
       res.json(parsed);
     } catch (error) {
+      console.error('URL parsing error:', error);
       res.status(400).json({ 
         error: error instanceof Error ? error.message : "Failed to parse URL" 
       });
