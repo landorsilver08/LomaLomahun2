@@ -66,6 +66,12 @@ export type DownloadRequest = {
   retryEnabled: boolean;
   preserveFilenames: boolean;
   skipExisting: boolean;
+  selectedImages?: {
+    previewUrl: string;
+    hostingPage: string;
+    hostingSite: string;
+    pageNumber: number;
+  }[];
 };
 
 export type DownloadProgress = {

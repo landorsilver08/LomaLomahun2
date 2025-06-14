@@ -32,6 +32,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Preview images from thread pages
+  app.post("/api/preview-images", async (req, res) => {
+    try {
+      const { threadUrl, fromPage, toPage } = req.body;
+      
+      if (!threadUrl || !fromPage || !toPage) {
+        return res.status(400).json({ error: "Thread URL and page range are required" });
+      }
+
+      console.log('Previewing images for:', threadUrl, 'pages', fromPage, 'to', toPage);
+      
+      const { threadId } = await scraper.parseThreadUrl(threadUrl);
+      const allImages = [];
+      
+      for (let page = fromPage; page <= toPage; page++) {
+        console.log(`Scraping page ${page}...`);
+        const pageImages = await scraper.scrapeThreadPage(threadId, page);
+        allImages.push(...pageImages);
+      }
+
+      console.log(`Found ${allImages.length} images`);
+      res.json({ images: allImages, totalImages: allImages.length });
+    } catch (error) {
+      console.error('Preview error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to preview images" 
+      });
+    }
+  });
+
   // Start a new download
   app.post("/api/downloads", async (req, res) => {
     try {

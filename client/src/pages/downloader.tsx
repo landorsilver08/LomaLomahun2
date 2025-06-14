@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Settings, HelpCircle } from "lucide-react";
+import { Download, Settings, HelpCircle, Eye } from "lucide-react";
 import UrlInput from "@/components/url-input";
 import PageRangeSelector from "@/components/page-range-selector";
 import DownloadOptions from "@/components/download-options";
 import MobileDirectoryPicker from "@/components/mobile-directory-picker";
+import ImagePreview from "@/components/image-preview";
 import { MobileAuthHandler, MobileDirectoryManager } from "@/components/mobile-auth-handler";
 import ProgressPanel from "@/components/progress-panel";
 import DownloadHistory from "@/components/download-history";
