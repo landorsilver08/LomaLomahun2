@@ -16,6 +16,8 @@ export default function DownloaderPage() {
   const [threadUrl, setThreadUrl] = useState("");
   const [detectedPage, setDetectedPage] = useState<number | null>(null);
   const [pageRange, setPageRange] = useState({ from: 1, to: 1 });
+  const [showPreview, setShowPreview] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [downloadOptions, setDownloadOptions] = useState({
     outputFormat: "individual" as "individual" | "zip",
     concurrentLimit: 3,
@@ -67,9 +69,18 @@ export default function DownloaderPage() {
       downloadLocation: mobileLocation.downloadLocation,
       customDirectory: mobileLocation.directoryName,
       googleDriveFolder: mobileLocation.googleDriveConnected ? "root" : undefined,
+      selectedImages: selectedImages.length > 0 ? selectedImages : undefined,
     };
 
     await startDownload(request);
+  };
+
+  const handlePreviewToggle = () => {
+    setShowPreview(!showPreview);
+  };
+
+  const handleImagesSelected = (images: any[]) => {
+    setSelectedImages(images);
   };
 
   const isFormValid = threadUrl && pageRange.from <= pageRange.to;
@@ -120,18 +131,34 @@ export default function DownloaderPage() {
 
             <MobileDirectoryPicker
               location={mobileLocation}
-              onLocationChange={setMobileLocation}
+              onLocationChange={(location) => setMobileLocation({
+                ...mobileLocation,
+                ...location
+              })}
             />
 
-            <Button
-              onClick={handleStartDownload}
-              disabled={!isFormValid || isStarting}
-              className="w-full h-12 text-base font-semibold"
-              size="lg"
-            >
-              <Download className="mr-2 h-5 w-5" />
-              {isStarting ? "Starting Download..." : "Start Download"}
-            </Button>
+            <div className="flex space-x-4">
+              <Button
+                onClick={handlePreviewToggle}
+                disabled={!isFormValid}
+                variant="outline"
+                className="flex-1 h-12 text-base font-semibold"
+                size="lg"
+              >
+                <Eye className="mr-2 h-5 w-5" />
+                {showPreview ? "Hide Preview" : "Preview Images"}
+              </Button>
+              
+              <Button
+                onClick={handleStartDownload}
+                disabled={!isFormValid || isStarting}
+                className="flex-1 h-12 text-base font-semibold"
+                size="lg"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                {isStarting ? "Starting Download..." : "Start Download"}
+              </Button>
+            </div>
           </div>
 
           {/* Progress Sidebar */}
@@ -139,6 +166,18 @@ export default function DownloaderPage() {
             <ProgressPanel />
           </div>
         </div>
+
+        {/* Image Preview */}
+        {showPreview && isFormValid && (
+          <div className="mt-8">
+            <ImagePreview
+              threadUrl={threadUrl}
+              fromPage={pageRange.from}
+              toPage={pageRange.to}
+              onImagesSelected={handleImagesSelected}
+            />
+          </div>
+        )}
 
         {/* Download History */}
         <div className="mt-8">

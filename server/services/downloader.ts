@@ -73,17 +73,38 @@ export class DownloadManager {
         startedAt: new Date() 
       });
 
-      // Stage 1: Parse thread URL and extract basic info
-      const { threadId } = await this.scraper.parseThreadUrl(session.threadUrl);
+      let allImages: ScrapedImage[] = [];
+
+      // Check if we have selected images in the session (stored as JSON string)
+      if (session.selectedImages) {
+        try {
+          const selectedImages = JSON.parse(session.selectedImages);
+          if (Array.isArray(selectedImages)) {
+            console.log('Using pre-selected images:', selectedImages.length);
+            allImages = selectedImages;
+          }
+        } catch (error) {
+          console.error('Failed to parse selected images:', error);
+        }
+      }
       
-      // Stage 2: Scrape all pages to collect image links
-      const allImages: ScrapedImage[] = [];
-      
-      for (let page = session.fromPage; page <= session.toPage; page++) {
-        const pageImages = await this.scraper.scrapeThreadPage(threadId, page);
-        allImages.push(...pageImages);
+      if (allImages.length === 0) {
+        // Stage 1: Parse thread URL and extract basic info
+        const { threadId } = await this.scraper.parseThreadUrl(session.threadUrl);
+        
+        // Stage 2: Scrape all pages to collect image links
+        console.log(`Scraping pages ${session.fromPage} to ${session.toPage}...`);
+        
+        for (let page = session.fromPage; page <= session.toPage; page++) {
+          console.log(`Scraping page ${page}...`);
+          const pageImages = await this.scraper.scrapeThreadPage(threadId, page);
+          console.log(`Found ${pageImages.length} images on page ${page}`);
+          allImages.push(...pageImages);
+        }
       }
 
+      console.log(`Total images to download: ${allImages.length}`);
+      
       await storage.updateDownloadSession(session.id, { 
         totalImages: allImages.length 
       });

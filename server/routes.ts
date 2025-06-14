@@ -80,6 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         retryEnabled: downloadRequest.retryEnabled,
         preserveFilenames: downloadRequest.preserveFilenames,
         skipExisting: downloadRequest.skipExisting,
+        selectedImages: downloadRequest.selectedImages ? JSON.stringify(downloadRequest.selectedImages) : null,
         status: 'pending',
         totalImages: 0,
         completedImages: 0,

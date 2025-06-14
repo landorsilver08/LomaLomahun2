@@ -20,6 +20,7 @@ export const downloadSessions = pgTable("download_sessions", {
   retryEnabled: boolean("retry_enabled").default(true),
   preserveFilenames: boolean("preserve_filenames").default(true),
   skipExisting: boolean("skip_existing").default(false),
+  selectedImages: text("selected_images"), // JSON string of selected images
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   errorMessage: text("error_message"),
