@@ -5,7 +5,7 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import JSZip from 'jszip';
 import { ViperGirlsScraper, type ScrapedImage } from './scraper';
-import { googleDriveService } from './google-drive';
+
 import { storage } from '../storage';
 import type { DownloadSession, DownloadedImage, DownloadProgress } from '@shared/schema';
 
@@ -252,14 +252,7 @@ export class MobileDownloadManager {
     }
   }
 
-  private async uploadToGoogleDriveMobile(filePath: string, fileName: string, session: DownloadSession): Promise<void> {
-    // For mobile implementations, we need to work with the frontend
-    // This is a placeholder for server-side Google Drive integration
-    // The actual mobile upload will be handled by the frontend using the File System Access API
-    if (session.googleDriveFolder) {
-      await googleDriveService.uploadFile(filePath, fileName, session.googleDriveFolder);
-    }
-  }
+
 
   private async createMobileArchive(session: DownloadSession): Promise<void> {
     const zip = new JSZip();
