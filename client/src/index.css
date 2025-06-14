@@ -3,50 +3,56 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(250, 20%, 99%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(210, 40%, 96%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(214, 32%, 91%);
-  --input: hsl(214, 32%, 91%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(210, 40%, 96%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(210, 40%, 96%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(207, 90%, 54%);
-  --radius: 0.5rem;
-  --surface: hsl(0, 0%, 100%);
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32.6%, 17.5%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32.6%, 17.5%);
+  --input: hsl(217, 32.6%, 17.5%);
+  --primary: hsl(263, 70%, 50%);
+  --primary-foreground: hsl(210, 20%, 98%);
+  --secondary: hsl(217, 32.6%, 17.5%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32.6%, 17.5%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(359, 51%, 48%);
+  --destructive-foreground: hsl(210, 20%, 98%);
+  --ring: hsl(263, 70%, 50%);
+  --radius: 0.75rem;
+  --surface: hsl(224, 71.4%, 4.1%);
+  --success: hsl(142, 76%, 36%);
+  --warning: hsl(38, 92%, 50%);
+  --info: hsl(198, 93%, 60%);
 }
 
 .dark {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(207, 90%, 54%);
-  --surface: hsl(240, 10%, 3.9%);
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32.6%, 17.5%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32.6%, 17.5%);
+  --input: hsl(217, 32.6%, 17.5%);
+  --primary: hsl(263, 70%, 50%);
+  --primary-foreground: hsl(210, 20%, 98%);
+  --secondary: hsl(217, 32.6%, 17.5%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32.6%, 17.5%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(359, 51%, 48%);
+  --destructive-foreground: hsl(210, 20%, 98%);
+  --ring: hsl(263, 70%, 50%);
+  --surface: hsl(224, 71.4%, 4.1%);
+  --success: hsl(142, 76%, 36%);
+  --warning: hsl(38, 92%, 50%);
+  --info: hsl(198, 93%, 60%);
 }
 
 @layer base {
@@ -56,6 +62,44 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  html {
+    @apply dark;
+  }
+}
+
+/* Mobile-first responsive design */
+@layer utilities {
+  /* Touch-friendly buttons */
+  .touch-button {
+    @apply min-h-[44px] min-w-[44px] rounded-xl;
+  }
+
+  /* Smooth scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Gradient backgrounds */
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--info)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 

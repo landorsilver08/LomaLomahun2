@@ -81,15 +81,10 @@ export class ViperGirlsScraper {
       // Look for image hosting URLs in the decoded HTML content
       const imageHostUrls = new Set<string>();
       
-      // Extract all URLs that match image hosting patterns
+      // Extract only ImageBam and Imgbox URLs as requested
       const urlPatterns = [
-        /https?:\/\/(?:www\.)?imgbox\.com\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:i\.)?imgur\.com\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:www\.)?imagetwist\.com\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:www\.)?postimg\.cc\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:www\.)?turboimagehost\.com\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:www\.)?imagebam\.com\/[a-zA-Z0-9]+/g,
-        /https?:\/\/(?:www\.)?imagevenue\.com\/[a-zA-Z0-9]+/g
+        /https?:\/\/(?:www\.)?imagebam\.com\/image\/[a-zA-Z0-9]+/g,
+        /https?:\/\/(?:www\.)?imgbox\.com\/[a-zA-Z0-9]+/g
       ];
 
       for (const pattern of urlPatterns) {
