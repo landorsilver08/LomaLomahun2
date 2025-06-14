@@ -3,9 +3,7 @@ import { Download, Settings, HelpCircle, Eye } from "lucide-react";
 import UrlInput from "@/components/url-input";
 import PageRangeSelector from "@/components/page-range-selector";
 import DownloadOptions from "@/components/download-options";
-import MobileDirectoryPicker from "@/components/mobile-directory-picker";
 import ImagePreview from "@/components/image-preview";
-import { MobileAuthHandler, MobileDirectoryManager } from "@/components/mobile-auth-handler";
 import ProgressPanel from "@/components/progress-panel";
 import DownloadHistory from "@/components/download-history";
 import { Button } from "@/components/ui/button";
@@ -26,35 +24,7 @@ export default function DownloaderPage() {
     skipExisting: false,
   });
 
-  const [mobileLocation, setMobileLocation] = useState({
-    downloadLocation: "local" as "local" | "google-drive",
-    selectedDirectory: undefined as FileSystemDirectoryHandle | undefined,
-    directoryName: undefined as string | undefined,
-    googleDriveConnected: false,
-    googleDriveAccessToken: undefined as string | undefined,
-  });
-
-  useEffect(() => {
-    // Check if Google Drive is already connected
-    const isConnected = MobileDirectoryManager.isGoogleDriveConnected();
-    if (isConnected) {
-      setMobileLocation(prev => ({ ...prev, googleDriveConnected: true }));
-    }
-
-    // Listen for Google Drive connection events
-    const handleGoogleDriveConnected = (event: any) => {
-      setMobileLocation(prev => ({ 
-        ...prev, 
-        googleDriveConnected: true,
-        googleDriveAccessToken: event.detail.tokens.access_token
-      }));
-    };
-
-    window.addEventListener('google-drive-connected', handleGoogleDriveConnected);
-    return () => {
-      window.removeEventListener('google-drive-connected', handleGoogleDriveConnected);
-    };
-  }, []);
+  const [downloadLocation, setDownloadLocation] = useState("local" as "local");
 
   const { startDownload, isStarting } = useDownload();
 
@@ -66,9 +36,7 @@ export default function DownloaderPage() {
       fromPage: pageRange.from,
       toPage: pageRange.to,
       ...downloadOptions,
-      downloadLocation: mobileLocation.downloadLocation,
-      customDirectory: mobileLocation.directoryName,
-      googleDriveFolder: mobileLocation.googleDriveConnected ? "root" : undefined,
+      downloadLocation: downloadLocation,
       selectedImages: selectedImages.length > 0 ? selectedImages : undefined,
     };
 
@@ -87,7 +55,6 @@ export default function DownloaderPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <MobileAuthHandler />
       {/* Header */}
       <header className="bg-surface shadow-sm border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -127,14 +94,6 @@ export default function DownloaderPage() {
             <DownloadOptions
               options={downloadOptions}
               onOptionsChange={setDownloadOptions}
-            />
-
-            <MobileDirectoryPicker
-              location={mobileLocation}
-              onLocationChange={(location) => setMobileLocation({
-                ...mobileLocation,
-                ...location
-              })}
             />
 
             <div className="flex space-x-4">

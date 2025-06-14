@@ -46,37 +46,83 @@ export class ViperGirlsScraper {
   }
 
   async scrapeThreadPage(threadId: string, page: number): Promise<ScrapedImage[]> {
-    const url = `https://vipergirls.to/threads/thread.${threadId}/page-${page}`;
+    const url = `https://vipergirls.to/threads/${threadId}/page-${page}`;
     
     try {
+      console.log(`Fetching URL: ${url}`);
       const response = await axios.get(url, {
-        headers: { 'User-Agent': this.userAgent },
+        headers: { 
+          'User-Agent': this.userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+        },
         timeout: 30000,
       });
 
       const $ = cheerio.load(response.data);
       const images: ScrapedImage[] = [];
 
-      // Look for image links in posts
-      $('.message-body').each((_, element) => {
-        $(element).find('a').each((_, linkElement) => {
-          const href = $(linkElement).attr('href');
-          if (href && this.isImageHostingUrl(href)) {
-            // Check if link contains an image preview
-            const img = $(linkElement).find('img');
-            if (img.length > 0) {
-              const previewUrl = img.attr('src') || '';
-              images.push({
-                previewUrl,
-                hostingPage: href,
-                hostingSite: this.extractHostingSite(href),
-                pageNumber: page,
-              });
-            }
+      console.log(`Page HTML length: ${response.data.length}`);
+
+      // Try multiple selectors that might contain post content
+      const postSelectors = [
+        '.message-body',
+        '.bbWrapper', 
+        '.post-content',
+        '.messageContent',
+        '.message-content',
+        'article .message',
+        '[data-lb-sidebar-href]',
+        '.js-post'
+      ];
+
+      let foundPosts = false;
+      for (const selector of postSelectors) {
+        const posts = $(selector);
+        if (posts.length > 0) {
+          console.log(`Found ${posts.length} posts using selector: ${selector}`);
+          foundPosts = true;
+          
+          posts.each((_, element) => {
+            $(element).find('a').each((_, linkElement) => {
+              const href = $(linkElement).attr('href');
+              if (href && this.isImageHostingUrl(href)) {
+                // Check if link contains an image preview
+                const img = $(linkElement).find('img');
+                if (img.length > 0) {
+                  const previewUrl = img.attr('src') || '';
+                  console.log(`Found image: ${href} -> ${previewUrl}`);
+                  images.push({
+                    previewUrl,
+                    hostingPage: href,
+                    hostingSite: this.extractHostingSite(href),
+                    pageNumber: page,
+                  });
+                }
+              }
+            });
+          });
+          break; // Use the first working selector
+        }
+      }
+
+      if (!foundPosts) {
+        console.log('No posts found with any selector. Available elements:');
+        $('*').each((_, element) => {
+          const tagName = $(element).prop('tagName');
+          const className = $(element).attr('class') || '';
+          const id = $(element).attr('id') || '';
+          if (className.includes('message') || className.includes('post') || id.includes('message') || id.includes('post')) {
+            console.log(`  ${tagName}.${className}#${id}`);
           }
         });
-      });
+      }
 
+      console.log(`Found ${images.length} images on page ${page}`);
       return images;
     } catch (error) {
       console.error(`Error scraping page ${page}:`, error);
