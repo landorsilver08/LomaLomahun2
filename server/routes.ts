@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { downloadManager } from "./services/downloader";
 import { ViperGirlsScraper } from "./services/scraper";
+import { googleDriveService } from "./services/google-drive";
 import { insertDownloadSessionSchema, type DownloadRequest } from "@shared/schema";
 import * as path from 'path';
 import * as fs from 'fs';
@@ -41,6 +42,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fromPage: downloadRequest.fromPage,
         toPage: downloadRequest.toPage,
         outputFormat: downloadRequest.outputFormat,
+        downloadLocation: downloadRequest.downloadLocation,
+        customDirectory: downloadRequest.customDirectory,
+        googleDriveFolder: downloadRequest.googleDriveFolder,
         concurrentLimit: downloadRequest.concurrentLimit,
         retryEnabled: downloadRequest.retryEnabled,
         preserveFilenames: downloadRequest.preserveFilenames,
@@ -153,6 +157,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(404).json({ 
         error: error instanceof Error ? error.message : "ZIP file not found" 
+      });
+    }
+  });
+
+  // Google Drive authentication URL
+  app.get("/api/google-drive/auth-url", (req, res) => {
+    try {
+      const authUrl = googleDriveService.getAuthUrl();
+      res.json({ authUrl });
+    } catch (error) {
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to generate auth URL" 
+      });
+    }
+  });
+
+  // Exchange authorization code for tokens
+  app.post("/api/google-drive/auth", async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ error: "Authorization code is required" });
+      }
+
+      const tokens = await googleDriveService.getTokens(code);
+      res.json(tokens);
+    } catch (error) {
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Failed to exchange authorization code" 
+      });
+    }
+  });
+
+  // List Google Drive folders
+  app.post("/api/google-drive/folders", async (req, res) => {
+    try {
+      const { accessToken, refreshToken } = req.body;
+      if (!accessToken || !refreshToken) {
+        return res.status(400).json({ error: "Access and refresh tokens are required" });
+      }
+
+      await googleDriveService.setCredentials(accessToken, refreshToken);
+      const folders = await googleDriveService.listFolders();
+      res.json(folders);
+    } catch (error) {
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to list folders" 
+      });
+    }
+  });
+
+  // Create Google Drive folder
+  app.post("/api/google-drive/create-folder", async (req, res) => {
+    try {
+      const { name, parentFolderId, accessToken, refreshToken } = req.body;
+      if (!name || !accessToken || !refreshToken) {
+        return res.status(400).json({ error: "Folder name, access token, and refresh token are required" });
+      }
+
+      await googleDriveService.setCredentials(accessToken, refreshToken);
+      const folderId = await googleDriveService.createFolder(name, parentFolderId);
+      res.json({ folderId });
+    } catch (error) {
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create folder" 
       });
     }
   });

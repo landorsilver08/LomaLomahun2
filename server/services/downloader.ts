@@ -262,7 +262,7 @@ export class DownloadManager {
 
   private async createZipArchive(session: DownloadSession): Promise<void> {
     const zip = new JSZip();
-    const sessionDir = path.join(this.downloadDir, `session_${session.id}`);
+    const sessionDir = this.getSessionDownloadDir(session);
     
     if (!fs.existsSync(sessionDir)) {
       throw new Error('Session download directory not found');
