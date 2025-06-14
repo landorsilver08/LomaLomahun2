@@ -5,6 +5,7 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import JSZip from 'jszip';
 import { ViperGirlsScraper, type ScrapedImage } from './scraper';
+import { googleDriveService } from './google-drive';
 import { storage } from '../storage';
 import type { DownloadSession, DownloadedImage, DownloadProgress } from '@shared/schema';
 
@@ -24,6 +25,24 @@ export class DownloadManager {
     if (!fs.existsSync(this.downloadDir)) {
       fs.mkdirSync(this.downloadDir, { recursive: true });
     }
+  }
+
+  private getSessionDownloadDir(session: DownloadSession): string {
+    if (session.customDirectory) {
+      // Use custom directory if specified
+      const customDir = path.join(session.customDirectory, `session_${session.id}`);
+      if (!fs.existsSync(customDir)) {
+        fs.mkdirSync(customDir, { recursive: true });
+      }
+      return customDir;
+    }
+    
+    // Default to downloads directory
+    const sessionDir = path.join(this.downloadDir, `session_${session.id}`);
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
+    return sessionDir;
   }
 
   async startDownload(sessionId: number): Promise<void> {
@@ -148,11 +167,8 @@ export class DownloadManager {
       // Get full resolution URL
       const fullImageUrl = await this.scraper.getFullResolutionUrl(image.originalUrl);
       
-      // Create session directory
-      const sessionDir = path.join(this.downloadDir, `session_${session.id}`);
-      if (!fs.existsSync(sessionDir)) {
-        fs.mkdirSync(sessionDir, { recursive: true });
-      }
+      // Get session directory
+      const sessionDir = this.getSessionDownloadDir(session);
 
       // Create page subdirectory
       const pageDir = path.join(sessionDir, `page_${image.pageNumber}`);
@@ -189,9 +205,23 @@ export class DownloadManager {
         storage.updateDownloadedImage(image.id, { progress });
       });
 
-      // Save file
+      // Save file locally first
       const writeStream = fs.createWriteStream(filePath);
       await pipelineAsync(response.data, writeStream);
+
+      // If Google Drive upload is enabled, upload the file
+      if (session.downloadLocation === 'google-drive' && session.googleDriveFolder) {
+        try {
+          // Upload to Google Drive
+          await googleDriveService.uploadFile(filePath, image.filename, session.googleDriveFolder);
+          
+          // Delete local file after successful upload (optional)
+          // fs.unlinkSync(filePath);
+        } catch (error) {
+          console.error('Failed to upload to Google Drive:', error);
+          // Continue with local storage if Google Drive fails
+        }
+      }
 
       await storage.updateDownloadedImage(image.id, {
         status: 'completed',

@@ -13,6 +13,9 @@ export const downloadSessions = pgTable("download_sessions", {
   failedImages: integer("failed_images").default(0),
   status: text("status").notNull().default("pending"), // pending, active, completed, failed, cancelled
   outputFormat: text("output_format").notNull().default("individual"), // individual, zip
+  downloadLocation: text("download_location").notNull().default("local"), // local, google-drive
+  customDirectory: text("custom_directory"), // Custom local directory path
+  googleDriveFolder: text("google_drive_folder"), // Google Drive folder ID
   concurrentLimit: integer("concurrent_limit").default(3),
   retryEnabled: boolean("retry_enabled").default(true),
   preserveFilenames: boolean("preserve_filenames").default(true),
@@ -56,6 +59,9 @@ export type DownloadRequest = {
   fromPage: number;
   toPage: number;
   outputFormat: "individual" | "zip";
+  downloadLocation: "local" | "google-drive";
+  customDirectory?: string;
+  googleDriveFolder?: string;
   concurrentLimit: number;
   retryEnabled: boolean;
   preserveFilenames: boolean;
