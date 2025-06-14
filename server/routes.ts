@@ -8,6 +8,7 @@ import { googleDriveService } from "./services/google-drive";
 import { insertDownloadSessionSchema, type DownloadRequest } from "@shared/schema";
 import * as path from 'path';
 import * as fs from 'fs';
+import axios from 'axios';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const scraper = new ViperGirlsScraper();
@@ -32,32 +33,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Preview images from thread pages
-  app.post("/api/preview-images", async (req, res) => {
+  // Extract ImageBam and Imgbox images from ViperGirls thread
+  app.post("/api/extract-images", async (req, res) => {
     try {
-      const { threadUrl, fromPage, toPage } = req.body;
+      const { threadUrl } = req.body;
       
-      if (!threadUrl || !fromPage || !toPage) {
-        return res.status(400).json({ error: "Thread URL and page range are required" });
+      if (!threadUrl) {
+        return res.status(400).json({ error: "Thread URL is required" });
       }
 
-      console.log('Previewing images for:', threadUrl, 'pages', fromPage, 'to', toPage);
+      console.log('Extracting ImageBam/Imgbox images from:', threadUrl);
       
-      const { threadId } = await scraper.parseThreadUrl(threadUrl);
+      const { threadId, currentPage } = await scraper.parseThreadUrl(threadUrl);
+      const startPage = currentPage || 1;
       const allImages = [];
       
-      for (let page = fromPage; page <= toPage; page++) {
-        console.log(`Scraping page ${page}...`);
-        const pageImages = await scraper.scrapeThreadPage(threadId, page);
-        allImages.push(...pageImages);
+      // Start with the first page or detected page
+      console.log(`Scraping page ${startPage}...`);
+      const pageImages = await scraper.scrapeThreadPage(threadId, startPage);
+      allImages.push(...pageImages);
+
+      // Transform scraped images to match frontend interface
+      const transformedImages = allImages.map(img => ({
+        url: img.hostingPage,
+        previewUrl: img.previewUrl,
+        hostingSite: img.hostingSite,
+        fileName: `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`,
+        isValid: true
+      }));
+
+      console.log(`Found ${transformedImages.length} ImageBam/Imgbox images`);
+      res.json({ images: transformedImages, totalImages: transformedImages.length });
+    } catch (error) {
+      console.error('Extract images error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to extract images" 
+      });
+    }
+  });
+
+  // Download individual image from ImageBam or Imgbox
+  app.post("/api/download-image", async (req, res) => {
+    try {
+      const { url, fileName, hostingSite } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ error: "Image URL is required" });
       }
 
-      console.log(`Found ${allImages.length} images`);
-      res.json({ images: allImages, totalImages: allImages.length });
+      console.log('Downloading image from:', url);
+      
+      // Get full resolution URL
+      const fullResUrl = await scraper.getFullResolutionUrl(url);
+      
+      // Download the image
+      const response = await axios.get(fullResUrl, {
+        responseType: 'stream',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: 30000
+      });
+
+      // Set appropriate headers for download
+      res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      
+      // Pipe the image data to response
+      response.data.pipe(res);
+      
     } catch (error) {
-      console.error('Preview error:', error);
+      console.error('Download image error:', error);
       res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to preview images" 
+        error: error instanceof Error ? error.message : "Failed to download image" 
       });
     }
   });
