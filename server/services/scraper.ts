@@ -196,14 +196,16 @@ export class ViperGirlsScraper {
       const hostingSite = this.extractHostingSite(hostingPageUrl);
 
       switch (hostingSite) {
+        case 'imagebam.com':
+          return this.extractImageBamUrl($);
+        case 'imgbox.com':
+          return this.extractImgBoxUrl($);
         case 'imgur.com':
           return this.extractImgurUrl($, hostingPageUrl);
         case 'imagetwist.com':
           return this.extractImageTwistUrl($);
         case 'postimg.cc':
           return this.extractPostImgUrl($);
-        case 'imgbox.com':
-          return this.extractImgBoxUrl($);
         default:
           // Generic fallback - look for largest image
           return this.extractGenericImageUrl($);
@@ -267,6 +269,20 @@ export class ViperGirlsScraper {
     return imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl;
   }
 
+  private extractImageBamUrl($: cheerio.CheerioAPI): string {
+    // ImageBam stores the full image URL in various places
+    const imageUrl = $('.main-image img').attr('src') || 
+                    $('#image').attr('src') || 
+                    $('img[src*="images2.imagebam.com"]').attr('src') ||
+                    $('img[src*="images3.imagebam.com"]').attr('src') ||
+                    $('img[src*="images4.imagebam.com"]').attr('src');
+    
+    if (!imageUrl) {
+      throw new Error('Could not find image on ImageBam page');
+    }
+    return imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl;
+  }
+
   private extractImgBoxUrl($: cheerio.CheerioAPI): string {
     const imageUrl = $('#img').attr('src') || $('.image img').attr('src');
     if (!imageUrl) {
@@ -301,6 +317,19 @@ export class ViperGirlsScraper {
       const hostingSite = this.extractHostingSite(hostingPageUrl);
       
       switch (hostingSite) {
+        case 'imagebam.com':
+          // Extract ID from imagebam URL and construct thumbnail
+          // URL format: https://www.imagebam.com/image/abc123
+          const imagebamMatch = hostingPageUrl.match(/imagebam\.com\/image\/([a-zA-Z0-9]+)/);
+          if (imagebamMatch) {
+            const imageId = imagebamMatch[1];
+            // ImageBam thumbnail format: https://thumbs2.imagebam.com/abc/123/abc123_t.jpg
+            const prefix = imageId.substring(0, 3);
+            const suffix = imageId.substring(3, 6);
+            return `https://thumbs2.imagebam.com/${prefix}/${suffix}/${imageId}_t.jpg`;
+          }
+          break;
+        
         case 'imgbox.com':
           // Extract ID from imgbox URL and construct thumbnail
           const imgboxMatch = hostingPageUrl.match(/imgbox\.com\/([a-zA-Z0-9]+)/);
@@ -309,29 +338,67 @@ export class ViperGirlsScraper {
           }
           break;
         
-        case 'imgur.com':
-          // Extract ID from imgur URL
-          const imgurMatch = hostingPageUrl.match(/imgur\.com\/([a-zA-Z0-9]+)/);
-          if (imgurMatch) {
-            return `https://i.imgur.com/${imgurMatch[1]}t.jpg`;
-          }
-          break;
-        
-        case 'imagetwist.com':
-          // ImageTwist doesn't have a standard thumbnail format, use placeholder
-          return '/api/placeholder/150/150';
-        
-        case 'postimg.cc':
-          // PostImg doesn't have a standard thumbnail format, use placeholder
-          return '/api/placeholder/150/150';
-        
         default:
-          return '/api/placeholder/150/150';
+          return hostingPageUrl; // Return original URL as fallback
       }
       
-      return '/api/placeholder/150/150';
+      return hostingPageUrl;
     } catch {
-      return '/api/placeholder/150/150';
+      return hostingPageUrl;
+    }
+  }
+
+  async extractPageText(threadId: string, page: number): Promise<string> {
+    const url = `https://vipergirls.to/threads/${threadId}/page-${page}`;
+    
+    try {
+      const response = await axios.get(url, {
+        headers: { 
+          'User-Agent': this.userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        },
+        timeout: 30000,
+      });
+
+      const $ = cheerio.load(response.data);
+      
+      // Extract text from posts, excluding quotes and signatures
+      const postTexts: string[] = [];
+      const postSelectors = [
+        '.message-body',
+        '.bbWrapper', 
+        '.post-content',
+        '.messageContent',
+        '.message-content',
+        'article .message',
+        '.js-post',
+        '.message',
+        '.post'
+      ];
+
+      for (const selector of postSelectors) {
+        const posts = $(selector);
+        if (posts.length > 0) {
+          posts.each((_, element) => {
+            // Remove quoted content and signatures
+            $(element).find('.bbCodeQuote, .signature, .quote').remove();
+            const text = $(element).text().trim();
+            if (text.length > 20) { // Only include substantial text
+              postTexts.push(text);
+            }
+          });
+          break;
+        }
+      }
+
+      // Also extract title and basic thread info
+      const title = $('h1, .p-title-value, .thread-title, title').first().text().trim();
+      const combinedText = [title, ...postTexts].join(' ').replace(/\s+/g, ' ').trim();
+      
+      return combinedText;
+    } catch (error) {
+      console.error(`Error extracting text from page ${page}:`, error);
+      return '';
     }
   }
 }

@@ -36,34 +36,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Extract ImageBam and Imgbox images from ViperGirls thread
   app.post("/api/extract-images", async (req, res) => {
     try {
-      const { threadUrl } = req.body;
+      const { threadUrl, pageCount = 3 } = req.body;
       
       if (!threadUrl) {
         return res.status(400).json({ error: "Thread URL is required" });
       }
 
-      console.log('Extracting ImageBam/Imgbox images from:', threadUrl);
+      console.log(`Extracting ImageBam/Imgbox images from: ${threadUrl} (${pageCount} pages)`);
       
       const { threadId, currentPage } = await scraper.parseThreadUrl(threadUrl);
       const startPage = currentPage || 1;
       const allImages = [];
+      const pageTexts = [];
       
-      // Start with the first page or detected page
-      console.log(`Scraping page ${startPage}...`);
-      const pageImages = await scraper.scrapeThreadPage(threadId, startPage);
-      allImages.push(...pageImages);
+      // Scan multiple pages for comprehensive image extraction
+      for (let page = startPage; page < startPage + pageCount; page++) {
+        try {
+          console.log(`Scraping page ${page}...`);
+          const pageImages = await scraper.scrapeThreadPage(threadId, page);
+          allImages.push(...pageImages);
+          
+          // Extract page text summary
+          const pageText = await scraper.extractPageText(threadId, page);
+          if (pageText) {
+            pageTexts.push({
+              page,
+              summary: pageText.substring(0, 200) + (pageText.length > 200 ? '...' : ''),
+              fullText: pageText
+            });
+          }
+        } catch (pageError) {
+          console.log(`Page ${page} not found or error, stopping scan`);
+          break;
+        }
+      }
 
       // Transform scraped images to match frontend interface
-      const transformedImages = allImages.map(img => ({
+      const transformedImages = allImages.map((img, index) => ({
         url: img.hostingPage,
         previewUrl: img.previewUrl,
         hostingSite: img.hostingSite,
-        fileName: `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`,
-        isValid: true
+        fileName: `${img.hostingSite.replace('.com', '')}_${img.pageNumber}_${index + 1}.jpg`,
+        isValid: true,
+        pageNumber: img.pageNumber
       }));
 
-      console.log(`Found ${transformedImages.length} ImageBam/Imgbox images`);
-      res.json({ images: transformedImages, totalImages: transformedImages.length });
+      console.log(`Found ${transformedImages.length} ImageBam/Imgbox images across ${pageTexts.length} pages`);
+      res.json({ 
+        images: transformedImages, 
+        totalImages: transformedImages.length,
+        pageTexts,
+        scannedPages: pageTexts.length
+      });
     } catch (error) {
       console.error('Extract images error:', error);
       res.status(500).json({ 

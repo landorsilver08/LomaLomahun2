@@ -16,6 +16,13 @@ interface ImageData {
   hostingSite: string;
   fileName: string;
   isValid: boolean;
+  pageNumber?: number;
+}
+
+interface PageText {
+  page: number;
+  summary: string;
+  fullText: string;
 }
 
 interface DownloadProgress {
@@ -28,6 +35,8 @@ export default function ImageDownloaderPage() {
   const [inputUrl, setInputUrl] = useState("");
   const [images, setImages] = useState<ImageData[]>([]);
   const [downloads, setDownloads] = useState<DownloadProgress[]>([]);
+  const [pageTexts, setPageTexts] = useState<PageText[]>([]);
+  const [scannedPages, setScannedPages] = useState(0);
   const { toast } = useToast();
 
   const extractImagesMutation = useMutation({
