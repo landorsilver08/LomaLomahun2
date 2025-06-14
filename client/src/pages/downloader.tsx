@@ -29,6 +29,15 @@ export default function DownloaderPage() {
     googleDriveFolderName: undefined as string | undefined,
   });
 
+  const handleDownloadLocationChange = (newLocation: any) => {
+    setDownloadLocation({
+      downloadLocation: newLocation.downloadLocation,
+      customDirectory: newLocation.customDirectory,
+      googleDriveFolder: newLocation.googleDriveFolder,
+      googleDriveFolderName: newLocation.googleDriveFolderName,
+    });
+  };
+
   const { startDownload, isStarting } = useDownload();
 
   const handleStartDownload = async () => {
@@ -92,7 +101,7 @@ export default function DownloaderPage() {
 
             <DownloadLocationSelector
               location={downloadLocation}
-              onLocationChange={setDownloadLocation}
+              onLocationChange={handleDownloadLocationChange}
             />
 
             <Button

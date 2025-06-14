@@ -14,9 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 
 interface DownloadLocationData {
   downloadLocation: "local" | "google-drive";
-  customDirectory?: string;
-  googleDriveFolder?: string;
-  googleDriveFolderName?: string;
+  customDirectory: string | undefined;
+  googleDriveFolder: string | undefined;
+  googleDriveFolderName: string | undefined;
 }
 
 interface DownloadLocationSelectorProps {
