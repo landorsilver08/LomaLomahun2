@@ -3,6 +3,7 @@ import { Download, Settings, HelpCircle, Eye } from "lucide-react";
 import UrlInput from "@/components/url-input";
 import PageRangeSelector from "@/components/page-range-selector";
 import DownloadOptions from "@/components/download-options";
+import DirectoryPicker from "@/components/directory-picker";
 import ImagePreview from "@/components/image-preview";
 import ProgressPanel from "@/components/progress-panel";
 import DownloadHistory from "@/components/download-history";
